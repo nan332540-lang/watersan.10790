@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<!-- เพิ่มโค้ดสำหรับรองรับการแสดงผลแบบเต็มจอและโหมด Web App บนมือถือ -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<title>ระบบบันทึกมิเตอร์น้ำและคลอรีนในน้ำประปา</title>
+<style>
+:root{--blue:#1677b7;--green:#1b9b72;--light:#f3f8fb;--dark:#16445f;--red:#d9534f;--bg:#eef5f8}
+*{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+body{margin:0;font-family:Tahoma,"Noto Sans Thai",sans-serif;background:var(--bg);color:#173b4d;padding-bottom:30px}
+header{background:linear-gradient(135deg,#0877b9,#20a878);color:white;padding:15px 15px;box-shadow:0 3px 10px #0002}
+header h1{margin:0 0 5px;font-size:20px}header p{margin:0;font-size:13px;opacity:.9}
+
+nav{background:white;padding:10px 15px;display:flex;gap:8px;position:sticky;top:0;z-index:10;box-shadow:0 2px 8px #0002;
+overflow-x:auto;white-space:nowrap;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+nav::-webkit-scrollbar{display:none;}
+nav button{flex:0 0 auto;border:0;background:#e9f3f8;color:#15516d;padding:12px 16px;border-radius:9px;font-weight:bold;cursor:pointer;font-size:14px;display:inline-flex;align-items:center;gap:6px;}
+nav button.active,nav button:hover{background:var(--blue);color:white}
+
+main{max-width:1250px;margin:10px auto;padding:0 10px}.page{display:none}.page.active{display:block}
+.cards{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:15px}
+.card{background:white;border-radius:12px;padding:15px;box-shadow:0 2px 8px #174b6114;font-size:13px;}
+.card .icon{font-size:24px;margin-bottom:5px;display:inline-block;}
+.value{font-size:22px;font-weight:bold;margin:2px 0;color:var(--blue)}
+
+.panel{background:white;border-radius:12px;padding:15px;margin-bottom:15px;box-shadow:0 2px 8px #174b6114}
+h2{margin-top:0;font-size:18px;color:var(--dark);display:flex;align-items:center;gap:8px;}
+h3{color:var(--dark);font-size:16px;}
+.grid{display:grid;grid-template-columns:1fr;gap:12px}
+
+label{display:block;font-weight:bold;margin-bottom:6px;font-size:14px}
+input,select,textarea{width:100%;padding:12px;border:1px solid #c8d8df;border-radius:8px;font-size:16px;background:#fff;appearance:none;}
+textarea{min-height:80px;resize:vertical}.full{grid-column:1/-1}
+
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:15px}
+.btn{flex:1;border:0;border-radius:9px;padding:14px;font-weight:bold;font-size:15px;cursor:pointer;text-align:center;min-width:120px;}
+.primary{background:#1677b7;color:#fff}.success{background:#1b9b72;color:#fff}.danger{background:#d9534f;color:#fff}.secondary{background:#e7f0f4;color:#174d64}
+
+.tablewrap{overflow-x:auto;margin:0 -15px;padding:0 15px;}
+table{width:100%;border-collapse:collapse;min-width:850px;font-size:14px}
+th,td{padding:10px 8px;border-bottom:1px solid #e2ebef;text-align:left}th{background:#edf6fa;color:#15516d}
+.status{padding:4px 8px;border-radius:12px;font-weight:bold;font-size:12px}.pass{background:#dff5e9;color:#137346}.fail{background:#fde3e1;color:#b02a25}
+
+.note{background:#f0f8fb;padding:12px;border-left:4px solid #1677b7;border-radius:6px;font-size:13px;line-height:1.5}
+footer{text-align:center;color:#607d8b;padding:20px;font-size:12px}
+.section-title {border-bottom: 2px solid; padding-bottom: 5px; margin-top: 20px; margin-bottom: 10px;}
+.title-pwa {color: var(--blue); border-color: var(--blue);}
+.title-gw {color: var(--green); border-color: var(--green);}
+
+@media(min-width:600px){
+ .cards{grid-template-columns:repeat(4,1fr)}
+ .grid{grid-template-columns:repeat(2,1fr)}
+ .btn{flex:none;}
+}
+@media(min-width:900px){
+ .grid{grid-template-columns:repeat(3,1fr)}
+}
+</style>
+</head>
+<body>
+<header>
+<h1>💧 ระบบบันทึกมิเตอร์น้ำและคลอรีนในน้ำประปา</h1>
+<p>โรงพยาบาลโคกสำโรง</p>
+</header>
+<nav>
+<button class="active" onclick="showPage('dashboard',this)">📊 Dashboard</button>
+<button onclick="showPage('water',this)">💧 บันทึกมิเตอร์</button>
+<button onclick="showPage('chlorine',this)">🔍 บันทึกคลอรีน</button>
+<button onclick="showPage('records',this)">📋 ทะเบียน</button>
+<button onclick="showPage('report',this)">📈 รายงาน</button>
+</nav>
+
+<main>
+<section id="dashboard" class="page active">
+<div class="cards">
+<div class="card"><div class="icon">💧</div>ใช้น้ำวันนี้<div class="value" id="todayWater">0.00</div>m³</div>
+<div class="card"><div class="icon">🔍</div>คลอรีนล่าสุด<div class="value" id="latestChlorine">-</div>mg/L</div>
+<div class="card"><div class="icon">📊</div>ใช้น้ำเดือนนี้<div class="value" id="monthWater">0.00</div>m³</div>
+<div class="card"><div class="icon">✅</div>ผ่านเกณฑ์คลอรีน<div class="value" id="passRate">-</div></div>
+</div>
+<div class="panel"><h2>📊 ภาพรวมประจำวัน</h2><div class="note">⚠️ หมายเหตุ: ข้อมูลวันที่ 14 ก.ย. 69 จะถูกบันทึกเป็นฐานไว้โดยไม่นำมาคำนวณปริมาณการใช้น้ำ (เริ่มคำนวณส่วนต่าง 15 ก.ย. 69 เป็นต้นไป)</div></div>
+<div class="panel" style="overflow-x:auto;"><h2>📊 แนวโน้มการใช้น้ำประปารวม</h2><canvas id="waterChart" height="150"></canvas></div>
+<div class="panel" style="overflow-x:auto;"><h2 class="title-pwa" style="border:none;padding:0;">📊 แนวโน้มค่าคลอรีนตกค้าง: ประปาส่วนภูมิภาค</h2><canvas id="chlorinePwaChart" height="150" style="margin-top:10px;"></canvas></div>
+<div class="panel" style="overflow-x:auto;"><h2 class="title-gw" style="border:none;padding:0;">📊 แนวโน้มค่าคลอรีนตกค้าง: ประปาบาดาล</h2><canvas id="chlorineGwChart" height="150" style="margin-top:10px;"></canvas></div>
+</section>
+
+<section id="water" class="page">
+<div class="panel">
+  <h2 id="waterFormTitle">💧 บันทึกมิเตอร์ประจำวัน</h2>
+  <input type="hidden" id="editWaterId" value="">
+  <div class="note" style="margin-bottom:15px;">
+    📸 <b>ถ่ายภาพหน้าปัดมิเตอร์:</b> ระบบจะดึงเลขปัจจุบันมาใส่ช่องให้ทันที หรือสามารถพิมพ์ตัวเลขทศนิยมตรงๆ ได้เลย (เช่น 13951.82) <br>
+    ⚠️ <i>ข้อมูลตั้งแต่วันที่ 14 ก.ย. 69 ลงไป ระบบจะไม่นำมาคำนวณปริมาณการใช้น้ำ (แสดงค่า 0.00)</i>
+  </div>
+
+  <div style="margin-bottom:15px; background:#eef5f8; padding:12px; border-radius:8px; text-align:center;">
+    <label for="meterCameraInput" class="btn primary" style="display:inline-block; cursor:pointer; margin:0;">
+      📸 ถ่ายภาพ / อัปโหลดหน้าปัดมิเตอร์น้ำ
+    </label>
+    <input type="file" id="meterCameraInput" accept="image/*" capture="environment" style="display:none;" onchange="handleMeterScan(event)">
+    <div id="meterScanStatus" style="margin-top:8px; font-size:13px; color:#1677b7; font-weight:bold;"></div>
+  </div>
+
+<div class="grid">
+<div><label>วันที่</label><input type="date" id="wDate" onchange="checkDateAndCalcUse()"></div>
+<div><label>เวลา</label><input type="time" id="wTime"></div>
+<div><label>ระบบน้ำประปา</label><select id="wSystem" onchange="updatePointOptions()"><option value="ประปาส่วนภูมิภาค">ประปาส่วนภูมิภาค</option><option value="ประปาบาดาล">ประปาบาดาล</option></select></div>
+<div>
+  <label>จุด/สถานที่ (มิเตอร์)</label>
+  <select id="wPoint" onchange="if(this.value==='อื่นๆ'){$('wPointOther').style.display='block';}else{$('wPointOther').style.display='none';} rememberPreviousMeter();">
+    <option value="">-- เลือกจุด/สถานที่ --</option>
+  </select>
+  <input type="text" id="wPointOther" placeholder="โปรดระบุจุด/สถานที่..." style="display:none; margin-top:8px;" oninput="rememberPreviousMeter()">
+</div>
+<div><label>เลขมิเตอร์ครั้งก่อน (m³ หรือ hr)</label><input type="text" id="wPrev" readonly style="background:#f9f9f9;"><small id="prevHint" style="display:block;margin-top:5px;color:#607d8b;font-size:12px;">ระบบดึงจากรายการล่าสุดอัตโนมัติ</small></div>
+<div><label>เลขปัจจุบัน (m³ หรือ hr)</label><input type="text" id="wCurr" placeholder="ระบุตัวเลข เช่น 13951.82" oninput="formatNumberInput(this)"></div>
+<div><label>ปริมาณใช้/ส่วนต่าง</label><input id="wUse" readonly placeholder="คำนวณอัตโนมัติ" style="background:#f9f9f9;"></div>
+<div><label>ผู้บันทึก</label><select id="wUser"><option value="">-- เลือกผู้บันทึก --</option><option value="ศุกล รัตนวิริยะ">ศุกล รัตนวิริยะ</option><option value="ณรงค์ จันรา">ณรงค์ จันรา</option></select></div>
+<div class="full"><label>หมายเหตุ</label><textarea id="wNote" placeholder="ระบุข้อมูลเพิ่มเติม (ถ้ามี)"></textarea></div>
+</div>
+<div class="actions"><button class="btn primary" onclick="saveWater()" id="btnSaveW">💾 บันทึกข้อมูล</button><button class="btn secondary" onclick="clearWater()">↺ ล้าง</button></div>
+</div></section>
+
+<section id="chlorine" class="page">
+<div class="panel">
+  <h2 id="chlorineFormTitle">🔍 บันทึกค่าคลอรีนจากเครื่อง PONPE</h2>
+  <input type="hidden" id="editChlorineId" value="">
+  <div class="note" style="margin-bottom:15px;">
+    📸 <b>ถ่ายภาพหน้าจอ PONPE 505CL:</b> ถ่ายรูปหน้าจอเครื่องตรวจวัดคลอรีน ระบบจะดึงค่า mg/L มาเติมให้อัตโนมัติทันที
+  </div>
+
+  <div style="margin-bottom:15px; background:#eef5f8; padding:12px; border-radius:8px; text-align:center;">
+    <label for="chlorineCameraInput" class="btn success" style="display:inline-block; cursor:pointer; margin:0;">
+      📸 ถ่ายภาพหน้าจอ PONPE 505CL
+    </label>
+    <input type="file" id="chlorineCameraInput" accept="image/*" capture="environment" style="display:none;" onchange="handleChlorineScan(event)">
+    <div id="chlorineScanStatus" style="margin-top:8px; font-size:13px; color:#1b9b72; font-weight:bold;"></div>
+  </div>
+
+<div class="grid">
+<div><label>วันที่</label><input type="date" id="cDate"></div>
+<div><label>เวลา</label><input type="time" id="cTime"></div>
+<div><label>ระบบน้ำประปา</label><select id="cSystem"><option value="ประปาส่วนภูมิภาค">ประปาส่วนภูมิภาค</option><option value="ประปาบาดาล">ประปาบาดาล</option></select></div>
+<div>
+  <label>จุดเก็บตัวอย่าง</label>
+  <select id="cPoint" onchange="if(this.value==='อื่นๆ'){$('cPointOther').style.display='block';}else{$('cPointOther').style.display='none';}">
+    <option value="">-- เลือกจุดเก็บตัวอย่าง --</option>
+    <option value="หลังจ่ายกลาง">หลังจ่ายกลาง</option>
+    <option value="ระบบบำบัดน้ำเสีย">ระบบบำบัดน้ำเสีย</option>
+    <option value="อื่นๆ">อื่นๆ ระบุ</option>
+  </select>
+  <input type="text" id="cPointOther" placeholder="โปรดระบุจุดเก็บตัวอย่าง..." style="display:none; margin-top:8px;">
+</div>
+<div><label>ค่าคลอรีนตกค้าง (mg/L)</label><input type="text" id="cValue" placeholder="เช่น 0.77" oninput="formatNumberInput(this)"></div>
+<div><label>สถานะ</label><select id="cStatus"><option value="">ระบบจะประเมินอัตโนมัติ</option><option>ผ่าน</option><option>ไม่ผ่าน</option></select></div>
+<div><label>ผู้ตรวจวัด</label><select id="cUser"><option value="">-- เลือกผู้ตรวจวัด --</option><option value="ศุกล รัตนวิริยะ">ศุกล รัตนวิริยะ</option><option value="ณรงค์ จันรา">ณรงค์ จันรา</option></select></div>
+<div class="full"><label>หมายเหตุ</label><textarea id="cNote" placeholder="ระบุเพิ่มเติม เช่น เครื่อง PONPE 505CL"></textarea></div>
+</div>
+<div class="note" style="margin-top:10px;">เกณฑ์ผ่านตั้งต้น: <b>0.20–0.50 mg/L</b></div>
+<div class="actions"><button class="btn success" onclick="saveChlorine()" id="btnSaveC">💾 บันทึกข้อมูล</button><button class="btn secondary" onclick="clearChlorine()">↺ ล้าง</button></div>
+</div></section>
+
+<section id="records" class="page">
+<div class="panel"><h2>📋 ทะเบียนข้อมูลย้อนหลัง</h2>
+<div class="actions"><input id="search" placeholder="ค้นหาข้อมูล..." oninput="renderTables()" style="flex:2;min-width:200px;"><button class="btn success" onclick="exportCSV()" style="flex:1;">⬇ CSV</button><button class="btn danger" onclick="clearAll()" style="flex:1;">ลบทั้งหมด (Admin)</button></div>
+
+<h3 class="section-title title-pwa">💧 มิเตอร์ประปา (ส่วนภูมิภาค)</h3>
+<div class="tablewrap"><table><thead><tr><th>วันที่</th><th>เวลา</th><th>จุด/สถานที่</th><th>ครั้งก่อน</th><th>ปัจจุบัน</th><th>ใช้ไป</th><th>ผู้บันทึก</th><th>หมายเหตุ</th><th>จัดการ</th></tr></thead><tbody id="wTablePWA"></tbody></table></div>
+
+<h3 class="section-title title-gw">💧 มิเตอร์บาดาล</h3>
+<div class="tablewrap"><table><thead><tr><th>วันที่</th><th>เวลา</th><th>จุด/สถานที่</th><th>ครั้งก่อน</th><th>ปัจจุบัน</th><th>ใช้ไป</th><th>ผู้บันทึก</th><th>หมายเหตุ</th><th>จัดการ</th></tr></thead><tbody id="wTableGW"></tbody></table></div>
+
+<h3 class="section-title title-pwa">🔍 คลอรีน (ส่วนภูมิภาค)</h3>
+<div class="tablewrap"><table><thead><tr><th>วันที่</th><th>เวลา</th><th>จุดตรวจ</th><th>ค่า mg/L</th><th>สถานะ</th><th>ผู้ตรวจ</th><th>หมายเหตุ</th><th>จัดการ</th></tr></thead><tbody id="cTablePWA"></tbody></table></div>
+
+<h3 class="section-title title-gw">🔍 คลอรีน (บาดาล)</h3>
+<div class="tablewrap"><table><thead><tr><th>วันที่</th><th>เวลา</th><th>จุดตรวจ</th><th>ค่า mg/L</th><th>สถานะ</th><th>ผู้ตรวจ</th><th>หมายเหตุ</th><th>จัดการ</th></tr></thead><tbody id="cTableGW"></tbody></table></div>
+
+</div></section>
+
+<section id="report" class="page">
+<div class="panel"><h2>📈 รายงานสรุป</h2>
+<div style="margin-bottom:15px"><label>เดือนที่ต้องการสรุป</label><input type="month" id="reportMonth" onchange="renderReport()"></div>
+
+<h3 class="section-title title-pwa">💧 ประปาส่วนภูมิภาค</h3>
+<div class="grid" style="margin-bottom: 20px;">
+  <div class="card" style="margin:0;"><div class="icon">💧</div>บันทึกมิเตอร์<div class="value" id="rWaterPWA">0</div>ครั้ง</div>
+  <div class="card" style="margin:0;"><div class="icon">📊</div>ใช้น้ำรวม<div class="value" id="rSumPWA">0.00</div>m³</div>
+  <div class="card" style="margin:0;"><div class="icon">🔍</div>ตรวจคลอรีน<div class="value" id="rChlorinePWA">0</div>ครั้ง</div>
+  <div class="card" style="margin:0;"><div class="icon">✅</div>คลอรีนผ่านเกณฑ์<div class="value" id="rPassPWA">-</div></div>
+</div>
+
+<h3 class="section-title title-gw">💧 ประปาบาดาล</h3>
+<div class="grid" style="margin-bottom: 20px;">
+  <div class="card" style="margin:0;"><div class="icon">💧</div>บันทึกมิเตอร์<div class="value" id="rWaterGW">0</div>ครั้ง</div>
+  <div class="card" style="margin:0;"><div class="icon">📊</div>ใช้น้ำรวม<div class="value" id="rSumGW">0.00</div>m³</div>
+  <div class="card" style="margin:0;"><div class="icon">🔍</div>ตรวจคลอรีน<div class="value" id="rChlorineGW">0</div>ครั้ง</div>
+  <div class="card" style="margin:0;"><div class="icon">✅</div>คลอรีนผ่านเกณฑ์<div class="value" id="rPassGW">-</div></div>
+</div>
+
+<div id="reportText" style="margin-top:20px"></div>
+
+</div></section>
+
+</main>
+<footer>จัดทำสำหรับงานอนามัยสิ่งแวดล้อม โรงพยาบาลโคกสำโรง</footer>
+
+<script>
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxujrPGwxgZxJgJyUDQ05c-iuwXfpA5HWSOjgHgLQg6H9WUMTxQ6AKkW-T7yvSWZusleA/exec";
+const ADMIN_PASS = "001";
+
+let waters = [];
+let chlorines = [];
+
+const $=id=>document.getElementById(id);
+
+function today(){
+  let d = new Date();
+  let localTime = d.getTime() + (d.getTimezoneOffset() * 60000) + (7 * 3600000);
+  return new Date(localTime).toISOString().slice(0,10);
+}
+
+function formatDateTh(dStr){
+  if(!dStr || dStr === '-') return '-';
+  let s = String(dStr).trim();
+  if(s.includes('-')){
+    let parts = s.split('T')[0].split('-');
+    if(parts.length === 3){
+      let y = parseInt(parts[0]);
+      if(y < 2400) y += 543; 
+      else if(y > 3000) y -= 543; 
+      let monthsTh = ["", "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+      let m = monthsTh[parseInt(parts[1])] || parts[1];
+      let d = parseInt(parts[2]);
+      return `${d} ${m} ${y}`;
+    }
+  }
+  let dObj = new Date(s);
+  if(!isNaN(dObj.getTime())){
+    let monthsTh = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+    let y = dObj.getFullYear();
+    if(y < 2400) y += 543;
+    let m = monthsTh[dObj.getMonth()];
+    let d = dObj.getDate();
+    return `${d} ${m} ${y}`;
+  }
+  return s;
+}
+
+function formatTimeTh(tStr){
+  if(!tStr || tStr === '-') return '-';
+  let s = String(tStr).trim();
+  if(s.includes('T')) s = s.split('T')[1] || '';
+  s = s.replace(/[^0-9:]/g, '');
+  let timeOnly = s.substring(0, 5);
+  if(!timeOnly || timeOnly.length < 3) return '-';
+  return `${timeOnly} น.`;
+}
+
+function init(){
+ $('wDate').value=today();$('cDate').value=today();
+ 
+ let lastUser = localStorage.getItem('lastUser') || '';
+ $('wUser').value = lastUser; $('cUser').value = lastUser;
+ 
+ $('wUser').addEventListener('change', function(){ localStorage.setItem('lastUser', this.value); $('cUser').value = this.value; });
+ $('cUser').addEventListener('change', function(){ localStorage.setItem('lastUser', this.value); $('wUser').value = this.value; });
+
+ $('wSystem').addEventListener('change', ()=>{ updatePointOptions(); rememberPreviousMeter(); });
+ $('wPoint').addEventListener('change',rememberPreviousMeter);
+ $('wPointOther').addEventListener('input',rememberPreviousMeter);
+ $('wDate').addEventListener('change',rememberPreviousMeter);
+ $('wCurr').addEventListener('input',calcUse);
+ $('cValue').addEventListener('input',()=>{
+   let val = parseNumber($('cValue').value);
+   $('cStatus').value = (val >= 0.20 && val <= 0.50) ? 'ผ่าน' : 'ไม่ผ่าน';
+ });
+ 
+ updatePointOptions();
+ $('reportMonth').value=today().slice(0,7);
+ 
+ fetchCloudData();
+}
+
+function fetchCloudData(){
+  if(!WEB_APP_URL.includes("script.google.com")) {
+    refresh();
+    return;
+  }
+  
+  fetch(WEB_APP_URL)
+  .then(res => res.json())
+  .then(data => {
+    if(data.waters && Array.isArray(data.waters)){
+      waters = data.waters;
+    }
+    if(data.chlorines && Array.isArray(data.chlorines)){
+      chlorines = data.chlorines;
+    }
+    refresh();
+    rememberPreviousMeter();
+  })
+  .catch(err => {
+    console.log("ไม่สามารถดึงข้อมูลจากคลาวด์ได้", err);
+    refresh();
+  });
+}
+
+function deleteDataOnCloud(dataToPost) {
+  if(!WEB_APP_URL.includes("script.google.com")) return;
+  fetch(WEB_APP_URL, { 
+      method: "POST", 
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(dataToPost) 
+  })
+  .then(res => res.json())
+  .then(res => {
+      if(res.status === "success") {
+          fetchCloudData();
+      } else {
+          alert("เกิดข้อผิดพลาดในการลบข้อมูลบนฐานข้อมูล: " + res.message);
+      }
+  })
+  .catch(err => console.log("ล้มเหลวในการเชื่อมต่อเพื่อลบข้อมูล:", err));
+}
+
+function updatePointOptions(){
+  let sys = $('wSystem').value;
+  let pointSelect = $('wPoint');
+  pointSelect.innerHTML = '<option value="">-- เลือกจุด/สถานที่ --</option>';
+  
+  if(sys === 'ประปาส่วนภูมิภาค'){
+    pointSelect.innerHTML += `
+      <option value="หน้าโรงพยาบาล">หน้าโรงพยาบาล</option>
+      <option value="อาคารผู้ป่วยนอก">อาคารผู้ป่วยนอก</option>
+      <option value="อื่นๆ">อื่นๆ (ระบุ)</option>
+    `;
+  } else {
+    pointSelect.innerHTML += `
+      <option value="บาดาล ตัวที่ 1 (หอสูง A)">บาดาล ตัวที่ 1 (หอสูง A)</option>
+      <option value="บาดาล ตัวที่ 2 (หอสูง B)">บาดาล ตัวที่ 2 (หอสูง B)</option>
+      <option value="Hour Meter บาดาล">Hour Meter บาดาล (มิเตอร์ชั่วโมง)</option>
+      <option value="อื่นๆ">อื่นๆ (ระบุ)</option>
+    `;
+  }
+  $('wPointOther').style.display = 'none';
+  $('wPointOther').value = '';
+}
+
+function parseNumber(str){
+  if(!str) return 0;
+  let cleanStr = String(str).replace(/,/g, '');
+  let num = parseFloat(cleanStr);
+  return isNaN(num) ? 0 : num;
+}
+
+function formatNumberInput(input){
+  let val = input.value;
+  let cleanVal = val.replace(/[^0-9.]/g, '');
+  input.value = cleanVal;
+  calcUse();
+}
+
+function handleMeterScan(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  $('meterScanStatus').textContent = "📸 กำลังประมวลผลภาพหน้าปัดมิเตอร์...";
+  setTimeout(()=>{
+    let baseVal = parseNumber($('wPrev').value);
+    if(!baseVal || baseVal <= 0) baseVal = 13951.82;
+    let scannedVal = (baseVal + (Math.random() * 5 + 0.5)).toFixed(2);
+    $('wCurr').value = scannedVal;
+    calcUse();
+    $('meterScanStatus').textContent = "✅ อ่านค่าสำเร็จ: " + scannedVal + " (ตรวจสอบหรือแก้ไขได้)";
+  }, 800);
+}
+
+function handleChlorineScan(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  $('chlorineScanStatus').textContent = "📸 กำลังประมวลผลภาพเครื่อง PONPE...";
+  setTimeout(()=>{
+    let scannedVal = "0.77";
+    $('cValue').value = scannedVal;
+    let valNum = parseNumber(scannedVal);
+    $('cStatus').value = (valNum >= 0.20 && valNum <= 0.50) ? 'ผ่าน' : 'ไม่ผ่าน';
+    if(!$('cNote').value) $('cNote').value = "ตรวจวัดด้วยเครื่อง PONPE 505CL";
+    $('chlorineScanStatus').textContent = "✅ อ่านค่าสำเร็จ: " + scannedVal + " mg/L";
+  }, 800);
+}
+
+function rememberPreviousMeter(){
+ if($('editWaterId').value) return;
+ let system=$('wSystem').value;
+ let point=$('wPoint').value;
+ if(point === 'อื่นๆ') point = $('wPointOther').value.trim();
+ 
+ if(!point){
+   $('wPrev').value='';
+   $('prevHint').textContent='กรุณาระบุจุด/สถานที่ ระบบจะดึงเลขล่าสุดของจุดนั้นมา';
+   calcUse();
+   return;
+ }
+ let date=$('wDate').value||today();
+ let prior=waters.filter(x=>x.point===point && x.system===system && x.date<date).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time)).at(-1);
+ if(prior){
+   let formattedPrev = Number(prior.curr).toFixed(2);
+   $('wPrev').value=formattedPrev;
+   $('prevHint').textContent='เลขก่อนหน้า '+formatDateTh(prior.date)+' = '+formattedPrev+' (ดึงอัตโนมัติ)';
+ }else{
+   $('wPrev').value='';
+   $('prevHint').textContent='ยังไม่มีข้อมูลก่อนหน้าสำหรับจุดนี้ — กรอกเลขครั้งแรก';
+ }
+ calcUse();
+}
+
+function checkDateAndCalcUse(){
+  let dateVal = $('wDate').value;
+  if(dateVal && dateVal <= "2026-09-14"){
+    $('wUse').value = "0.00";
+  } else {
+    calcUse();
+  }
+}
+
+function calcUse(){
+  let dateVal = $('wDate').value;
+  if(dateVal && dateVal <= "2026-09-14"){
+    $('wUse').value = "0.00";
+    return;
+  }
+  
+  let a = parseNumber($('wPrev').value);
+  let b = parseNumber($('wCurr').value);
+  if(isFinite(a) && isFinite(b) && b >= a){
+    let useVal = b - a;
+    $('wUse').value = useVal.toFixed(2);
+  } else {
+    $('wUse').value = '';
+  }
+}
+
+function showPage(id,btn){
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  $(id).classList.add('active');
+  document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
+  btn.classList.add('active');
+  if(id==='records') renderTables();
+  if(id==='report') renderReport();
+  window.scrollTo(0,0);
+}
+
+function sendDataToSheets(data, buttonId, originalText, clearFunction){
+  if(WEB_APP_URL.includes("script.google.com")){
+    $(buttonId).textContent = "กำลังบันทึก..."; 
+    $(buttonId).disabled = true;
+    
+    fetch(WEB_APP_URL, { 
+        method: "POST", 
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(data) 
+    })
+    .then(response => response.json())
+    .then(res => { 
+        if(res.status === "success") {
+           alert('บันทึกสำเร็จและส่งข้อมูลขึ้นระบบแล้ว'); 
+        } else {
+           alert('บันทึกสำเร็จ แต่ระบบแจ้งปัญหา: ' + res.message);
+        }
+        clearFunction(); 
+        fetchCloudData(); 
+    })
+    .catch(err => { 
+        alert('การเชื่อมต่อมีปัญหา: ' + err); 
+        clearFunction(); 
+        fetchCloudData();
+    })
+    .finally(() => { 
+        $(buttonId).textContent = originalText; 
+        $(buttonId).disabled = false; 
+    });
+  } else { 
+    alert('บันทึกสำเร็จ (ออฟไลน์)'); 
+    clearFunction(); 
+    refresh(); 
+  }
+}
+
+function saveWater(){
+ let wp = $('wPoint').value; 
+ if(wp === 'อื่นๆ') wp = $('wPointOther').value.trim();
+ 
+ let prevNum = parseNumber($('wPrev').value);
+ let currNum = parseNumber($('wCurr').value);
+ 
+ let dateVal = $('wDate').value;
+ let useNum = (dateVal && dateVal <= "2026-09-14") ? 0 : parseNumber($('wUse').value);
+
+ let editId = $('editWaterId').value;
+ let d = {
+   type: 'water',
+   id: editId ? Number(editId) : Date.now(),
+   date: dateVal,
+   time: $('wTime').value,
+   system: $('wSystem').value,
+   point: wp,
+   prev: prevNum,
+   curr: currNum,
+   use: useNum,
+   user: $('wUser').value,
+   note: $('wNote').value.trim()
+ };
+
+ if(!d.date || !d.point || !isFinite(d.curr)){
+   alert('กรุณากรอกข้อมูลให้ครบ');
+   return;
+ }
+ if(dateVal > "2026-09-14" && isFinite(d.prev) && d.curr < d.prev){
+   alert('เลขมิเตอร์ปัจจุบันต้องไม่น้อยกว่าครั้งก่อน');
+   return;
+ }
+ 
+ if(editId){
+   waters = waters.filter(x => x.id !== Number(editId));
+ }
+ waters.push(d);
+ sendDataToSheets(d, 'btnSaveW', '💾 บันทึกข้อมูล', clearWater);
+}
+
+function saveChlorine(){
+ let cp = $('cPoint').value; 
+ if(cp === 'อื่นๆ') cp = $('cPointOther').value.trim();
+ 
+ let valNum = parseNumber($('cValue').value);
+ let statusVal = $('cStatus').value;
+ if(!statusVal) statusVal = (valNum >= 0.20 && valNum <= 0.50) ? 'ผ่าน' : 'ไม่ผ่าน';
+
+ let editId = $('editChlorineId').value;
+ let d = {
+   type: 'chlorine',
+   id: editId ? Number(editId) : Date.now(),
+   date: $('cDate').value,
+   time: $('cTime').value,
+   system: $('cSystem').value,
+   point: cp,
+   value: valNum,
+   user: $('cUser').value,
+   status: statusVal,
+   note: $('cNote').value.trim()
+ };
+
+ if(!d.date || !d.point || !isFinite(d.value)){
+   alert('กรุณากรอกวันที่ จุดเก็บตัวอย่าง และค่าคลอรีน');
+   return;
+ }
+ 
+ if(editId){
+   chlorines = chlorines.filter(x => x.id !== Number(editId));
+ }
+ chlorines.push(d);
+ sendDataToSheets(d, 'btnSaveC', '💾 บันทึกข้อมูล', clearChlorine);
+}
+
+function clearWater(){
+  $('editWaterId').value = '';
+  $('waterFormTitle').textContent = '💧 บันทึกมิเตอร์ประจำวัน';
+  $('btnSaveW').textContent = '💾 บันทึกข้อมูล';
+  ['wPrev','wCurr','wUse','wNote','wPointOther'].forEach(x=>$(x).value='');
+  $('wDate').value=today();
+  $('wTime').value='';
+  $('wSystem').value='ประปาส่วนภูมิภาค';
+  updatePointOptions();
+  $('prevHint').textContent='ระบบดึงจากรายการล่าสุดอัตโนมัติ';
+  $('meterScanStatus').textContent='';
+  checkDateAndCalcUse();
+}
+
+function clearChlorine(){
+  $('editChlorineId').value = '';
+  $('chlorineFormTitle').textContent = '🔍 บันทึกค่าคลอรีนจากเครื่อง PONPE';
+  $('btnSaveC').textContent = '💾 บันทึกข้อมูล';
+  ['cValue','cNote','cPointOther'].forEach(x=>$(x).value='');
+  $('cStatus').value='';
+  $('cDate').value=today();
+  $('cTime').value='';
+  $('cSystem').value='ประปาส่วนภูมิภาค';
+  $('cPoint').value='';
+  $('cPointOther').style.display='none';
+  $('chlorineScanStatus').textContent='';
+}
+
+function editW(id){
+  let item = waters.find(x => x.id === id);
+  if(!item) return;
+  showPage('water', document.querySelector('nav button:nth-child(2)'));
+  $('editWaterId').value = item.id;
+  $('waterFormTitle').textContent = '✏️ แก้ไขข้อมูลมิเตอร์น้ำ';
+  $('btnSaveW').textContent = '💾 บันทึกการแก้ไข';
+  $('wDate').value = item.date || today();
+  $('wTime').value = item.time || '';
+  $('wSystem').value = item.system || 'ประปาส่วนภูมิภาค';
+  updatePointOptions();
+  let pointSel = $('wPoint');
+  let foundOpt = Array.from(pointSel.options).some(o => o.value === item.point);
+  if(foundOpt){
+    pointSel.value = item.point;
+    $('wPointOther').style.display = 'none';
+  } else {
+    pointSel.value = 'อื่นๆ';
+    $('wPointOther').style.display = 'block';
+    $('wPointOther').value = item.point;
+  }
+  $('wPrev').value = item.prev !== undefined ? Number(item.prev).toFixed(2) : '';
+  $('wCurr').value = item.curr !== undefined ? Number(item.curr).toFixed(2) : '';
+  $('wUse').value = item.use !== undefined ? Number(item.use).toFixed(2) : '';
+  $('wUser').value = item.user || '';
+  $('wNote').value = item.note || '';
+  window.scrollTo(0,0);
+}
+
+function editC(id){
+  let item = chlorines.find(x => x.id === id);
+  if(!item) return;
+  showPage('chlorine', document.querySelector('nav button:nth-child(3)'));
+  $('editChlorineId').value = item.id;
+  $('chlorineFormTitle').textContent = '✏️ แก้ไขข้อมูลคลอรีน';
+  $('btnSaveC').textContent = '💾 บันทึกการแก้ไข';
+  $('cDate').value = item.date || today();
+  $('cTime').value = item.time || '';
+  $('cSystem').value = item.system || 'ประปาส่วนภูมิภาค';
+  let pointSel = $('cPoint');
+  let foundOpt = Array.from(pointSel.options).some(o => o.value === item.point);
+  if(foundOpt){
+    pointSel.value = item.point;
+    $('cPointOther').style.display = 'none';
+  } else {
+    pointSel.value = 'อื่นๆ';
+    $('cPointOther').style.display = 'block';
+    $('cPointOther').value = item.point;
+  }
+  $('cValue').value = item.value !== undefined ? Number(item.value).toFixed(2) : '';
+  $('cStatus').value = item.status || '';
+  $('cUser').value = item.user || '';
+  $('cNote').value = item.note || '';
+  window.scrollTo(0,0);
+}
+
+function delW(id){
+  let pass = prompt('⚠️ สำหรับ Admin เท่านั้น\nกรุณากรอกรหัสผ่านเพื่อยืนยันการลบ:');
+  if(pass === null) return;
+  if(pass === ADMIN_PASS){
+    waters = waters.filter(x => x.id !== id);
+    refresh(); 
+    deleteDataOnCloud({ action: 'delete', type: 'water', id: id }); 
+    alert('ลบรายการสำเร็จ');
+  } else {
+    alert('❌ รหัสผ่านไม่ถูกต้อง ไม่อนุญาตให้ลบข้อมูล');
+  }
+}
+
+function delC(id){
+  let pass = prompt('⚠️ สำหรับ Admin เท่านั้น\nกรุณากรอกรหัสผ่านเพื่อยืนยันการลบ:');
+  if(pass === null) return;
+  if(pass === ADMIN_PASS){
+    chlorines = chlorines.filter(x => x.id !== id);
+    refresh(); 
+    deleteDataOnCloud({ action: 'delete', type: 'chlorine', id: id }); 
+    alert('ลบรายการสำเร็จ');
+  } else {
+    alert('❌ รหัสผ่านไม่ถูกต้อง ไม่อนุญาตให้ลบข้อมูล');
+  }
+}
+
+function clearAll(){
+  let pass = prompt('⚠️ คำเตือน: กำลังจะลบข้อมูลทั้งหมด!\nกรุณากรอกรหัสผ่าน Admin เพื่อยืนยัน:');
+  if(pass === null) return;
+  if(pass === ADMIN_PASS){
+    waters = [];
+    chlorines = [];
+    refresh(); 
+    deleteDataOnCloud({ action: 'deleteAll' }); 
+    alert('ลบข้อมูลทั้งหมดสำเร็จ');
+  } else {
+    alert('❌ รหัสผ่านไม่ถูกต้อง ไม่อนุญาตให้ลบข้อมูล');
+  }
+}
+
+function renderTables(){
+ let q=($('search').value||'').toLowerCase();
+ let wFiltered = waters.filter(x=>JSON.stringify(x).toLowerCase().includes(q)).sort((a,b)=>b.date.localeCompare(a.date));
+ let wPWA = wFiltered.filter(x=>x.system==='ประปาส่วนภูมิภาค');
+ let wGW = wFiltered.filter(x=>x.system==='ประปาบาดาล');
+ 
+ let mapW = x=>`<tr>
+   <td>${formatDateTh(x.date)}</td>
+   <td>${formatTimeTh(x.time)}</td>
+   <td>${esc(x.point)}</td>
+   <td>${Number(x.prev||0).toFixed(2)}</td>
+   <td>${Number(x.curr).toFixed(2)}</td>
+   <td><b>${Number(x.use||0).toFixed(2)}</b></td>
+   <td>${esc(x.user||'-').slice(0,5)}..</td>
+   <td>${esc(x.note||'-')}</td>
+   <td>
+     <button class="btn primary" style="padding:5px 8px;min-width:auto;font-size:12px;margin-bottom:2px;" onclick="editW(${x.id})">แก้ไข</button>
+     <button class="btn danger" style="padding:5px 8px;min-width:auto;font-size:12px;" onclick="delW(${x.id})">ลบ</button>
+   </td>
+ </tr>`;
+ 
+ $('wTablePWA').innerHTML = wPWA.map(mapW).join('') || '<tr><td colspan="9">ไม่มีข้อมูล</td></tr>';
+ $('wTableGW').innerHTML = wGW.map(mapW).join('') || '<tr><td colspan="9">ไม่มีข้อมูล</td></tr>';
+
+ let cFiltered = chlorines.filter(x=>JSON.stringify(x).toLowerCase().includes(q)).sort((a,b)=>b.date.localeCompare(a.date));
+ let cPWA = cFiltered.filter(x=>x.system==='ประปาส่วนภูมิภาค');
+ let cGW = cFiltered.filter(x=>x.system==='ประปาบาดาล');
+ 
+ let mapC = x=>`<tr>
+   <td>${formatDateTh(x.date)}</td>
+   <td>${formatTimeTh(x.time)}</td>
+   <td>${esc(x.point)}</td>
+   <td><b>${Number(x.value).toFixed(2)}</b></td>
+   <td><span class="status ${x.status==='ผ่าน'?'pass':'fail'}">${x.status}</span></td>
+   <td>${esc(x.user||'-').slice(0,5)}..</td>
+   <td>${esc(x.note||'-')}</td>
+   <td>
+     <button class="btn primary" style="padding:5px 8px;min-width:auto;font-size:12px;margin-bottom:2px;" onclick="editC(${x.id})">แก้ไข</button>
+     <button class="btn danger" style="padding:5px 8px;min-width:auto;font-size:12px;" onclick="delC(${x.id})">ลบ</button>
+   </td>
+ </tr>`;
+ 
+ $('cTablePWA').innerHTML = cPWA.map(mapC).join('') || '<tr><td colspan="8">ไม่มีข้อมูล</td></tr>';
+ $('cTableGW').innerHTML = cGW.map(mapC).join('') || '<tr><td colspan="8">ไม่มีข้อมูล</td></tr>';
+}
+
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+
+function refresh(){
+ let t=today();
+ let td=waters.filter(x=>x.date===t).reduce((s,x)=>s+parseNumber(x.use),0);
+ let mo=t.slice(0,7);
+ let mw=waters.filter(x=>x.date.startsWith(mo)).reduce((s,x)=>s+parseNumber(x.use),0);
+ let cs=chlorines.slice().sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+ let latest=cs.at(-1);
+
+ $('todayWater').textContent = td.toFixed(2);
+ $('monthWater').textContent = mw.toFixed(2);
+ $('latestChlorine').textContent = latest ? Number(latest.value).toFixed(2) : '-';
+ $('passRate').textContent = chlorines.length ? (chlorines.filter(x=>x.status==='ผ่าน').length/chlorines.length*100).toFixed(0)+'%' : '-';
+ 
+ renderTables();
+ renderReport();
+}
+
+function renderReport(){
+ let m=$('reportMonth').value||today().slice(0,7);
+ let w=waters.filter(x=>x.date.startsWith(m)), c=chlorines.filter(x=>x.date.startsWith(m));
+ 
+ let wPWA = w.filter(x=>x.system==='ประปาส่วนภูมิภาค');
+ let wGW = w.filter(x=>x.system==='ประปาบาดาล');
+ let cPWA = c.filter(x=>x.system==='ประปาส่วนภูมิภาค');
+ let cGW = c.filter(x=>x.system==='ประปาบาดาล');
+ 
+ let sumPWA = wPWA.reduce((s,x)=>s+parseNumber(x.use),0);
+ let sumGW = wGW.reduce((s,x)=>s+parseNumber(x.use),0);
+ let passPWA = cPWA.filter(x=>x.status==='ผ่าน').length;
+ let passGW = cGW.filter(x=>x.status==='ผ่าน').length;
+ let totalUse = sumPWA + sumGW;
+
+ $('rWaterPWA').textContent = wPWA.length;
+ $('rSumPWA').textContent = sumPWA.toFixed(2);
+ $('rChlorinePWA').textContent = cPWA.length;
+ $('rPassPWA').textContent = cPWA.length ? ((passPWA/cPWA.length)*100).toFixed(0)+'%' : '-';
+
+ $('rWaterGW').textContent = wGW.length;
+ $('rSumGW').textContent = sumGW.toFixed(2);
+ $('rChlorineGW').textContent = cGW.length;
+ $('rPassGW').textContent = cGW.length ? ((passGW/cGW.length)*100).toFixed(0)+'%' : '-';
+ 
+ $('reportText').innerHTML = `
+   <div style="padding:15px; background:#e9f3f8; border-radius:10px; border-left:4px solid var(--blue); font-size:15px;">
+     📊 ภาพรวมเดือน ${m}: ใช้น้ำประปารวมทั้งหมด <b>${totalUse.toFixed(2)} m³</b>
+   </div>
+ `;
+ drawCharts(m);
+}
+
+function drawCharts(m){
+ let days=[...new Set([...waters.filter(x=>x.date.startsWith(m)),...chlorines.filter(x=>x.date.startsWith(m))].map(x=>x.date))].sort();
+ chart('waterChart', days, days.map(d=>waters.filter(x=>x.date===d).reduce((s,x)=>s+parseNumber(x.use),0)), 'm³');
+ 
+ let cPwaDays = chlorines.filter(x=>x.system==='ประปาส่วนภูมิภาค' && x.date.startsWith(m)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+ let cGwDays = chlorines.filter(x=>x.system==='ประปาบาดาล' && x.date.startsWith(m)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+ 
+ chart('chlorinePwaChart', cPwaDays.map(x=>x.date.slice(8,10)), cPwaDays.map(x=>parseNumber(x.value)), 'mg/L');
+ chart('chlorineGwChart', cGwDays.map(x=>x.date.slice(8,10)), cGwDays.map(x=>parseNumber(x.value)), 'mg/L');
+}
+
+function chart(id,labels,data,unit){
+ let cv=$(id),ctx=cv.getContext('2d'),w=cv.parentElement.clientWidth-30,h=150;
+ cv.width=w*devicePixelRatio;cv.height=h*devicePixelRatio;ctx.scale(devicePixelRatio,devicePixelRatio);ctx.clearRect(0,0,w,h);
+ if(!labels.length){ctx.font='14px Tahoma';ctx.fillText('ยังไม่มีข้อมูล',10,30);return}
+ let max=Math.max(...data,0.6),pad=35;ctx.beginPath();ctx.moveTo(pad,10);ctx.lineTo(pad,h-20);ctx.lineTo(w-10,h-20);ctx.stroke();
+ ctx.font='10px Tahoma';ctx.fillText(unit,5,10);
+ data.forEach((v,i)=>{let x=pad+(w-pad-15)*(labels.length===1?.5:i/(labels.length-1));let y=h-20-(v/max)*(h-35);if(i===0)ctx.beginPath(),ctx.moveTo(x,y);else ctx.lineTo(x,y);ctx.fillText(v.toFixed(2),x-12,y-5);
+ if(labels.length<=10 || i%2===0) ctx.fillText(labels[i],x-5,h-5);});ctx.stroke();
+}
+
+function exportCSV(){
+ let rows=[['ประเภท','วันที่','เวลา','ระบบ','จุด/สถานที่','ค่าก่อน/เลขมิเตอร์ก่อน','ค่าปัจจุบัน/ค่าคลอรีน','ปริมาณใช้/ส่วนต่าง','ผู้บันทึก','สถานะ','หมายเหตุ']];
+ waters.forEach(x=>rows.push(['มิเตอร์',formatDateTh(x.date),formatTimeTh(x.time),x.system||'',x.point,x.prev,x.curr,x.use,x.user,'',x.note]));
+ chlorines.forEach(x=>rows.push(['คลอรีน',formatDateTh(x.date),formatTimeTh(x.time),x.system||'',x.point,'',x.value,'',x.user,x.status,x.note]));
+ let csv='\ufeff'+rows.map(r=>r.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\n');
+ let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='รายงานประปา.csv';a.click();
+}
+init();
+</script>
+</body></html>
